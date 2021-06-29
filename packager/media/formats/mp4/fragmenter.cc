@@ -49,9 +49,11 @@ void NewSampleEncryptionEntry(const DecryptConfig& decrypt_config,
 
 Fragmenter::Fragmenter(std::shared_ptr<const StreamInfo> stream_info,
                        TrackFragment* traf,
+                       MovieFragment* moof,
                        int64_t edit_list_offset)
     : stream_info_(std::move(stream_info)),
       traf_(traf),
+      moof_(moof),
       edit_list_offset_(edit_list_offset),
       seek_preroll_(GetSeekPreroll(*stream_info_)),
       earliest_presentation_time_(kInvalidTime),
@@ -151,6 +153,7 @@ Status Fragmenter::InitializeFragment(int64_t first_sample_dts) {
   fragment_duration_ = 0;
   earliest_presentation_time_ = kInvalidTime;
   first_sap_time_ = kInvalidTime;
+  fragment_.reset(new BufferWriter());
   data_.reset(new BufferWriter());
   key_frame_infos_.clear();
   return Status::OK;
@@ -218,6 +221,33 @@ Status Fragmenter::FinalizeFragment() {
     sample_to_group_entry.group_description_index =
         SampleToGroupEntry::kTrackFragmentGroupDescriptionIndexBase + 1;
   }
+
+  // Generate the moof meta data for this fragment.
+  MediaData mdat;
+  // Data offset relative to 'moof': moof size + mdat header size.
+  // The code will also update box sizes for moof_ and its child boxes.
+  uint64_t data_offset = moof_->ComputeSize() + mdat.HeaderSize();
+  // 'traf' should follow 'mfhd' moof header box.
+  uint64_t next_traf_position = moof_->HeaderSize() + moof_->box_size();
+  if (traf_->auxiliary_offset.offsets.size() > 0) {
+    DCHECK_EQ(traf_->auxiliary_offset.offsets.size(), 1u);
+    DCHECK(!traf_->sample_encryption.sample_encryption_entries.empty());
+    
+    next_traf_position += traf_->box_size();
+    // SampleEncryption 'senc' box should be the last box in 'traf'.
+    // |auxiliary_offset| should point to the data of SampleEncryption.
+    traf_->auxiliary_offset.offsets[0] =
+          next_traf_position - traf_->sample_encryption.box_size() +
+          traf_->sample_encryption.HeaderSize() +
+          sizeof(uint32_t);  // for sample count field in 'senc'
+  }
+  traf_->runs[0].data_offset = data_offset + mdat.data_size;
+  mdat.data_size += static_cast<uint32_t>(data_->Size());
+
+  // Store the complete fragment in a buffer.
+  moof_->Write(fragment_.get());
+  mdat.WriteHeader(fragment_.get());
+  fragment_->AppendBuffer(*data_);
 
   fragment_finalized_ = true;
   fragment_initialized_ = false;

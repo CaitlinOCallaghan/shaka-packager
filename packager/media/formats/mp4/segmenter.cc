@@ -77,7 +77,7 @@ Status Segmenter::Initialize(
     }
 
     fragmenters_[i].reset(
-        new Fragmenter(streams[i], &moof_->tracks[i], edit_list_offset));
+        new Fragmenter(streams[i], &moof_->tracks[i], moof_.get(), edit_list_offset));
   }
 
   // Choose the first stream if there is no VIDEO.
@@ -165,43 +165,7 @@ Status Segmenter::FinalizeSegment(size_t stream_id,
       return Status::OK;
   }
 
-  MediaData mdat;
-  // Data offset relative to 'moof': moof size + mdat header size.
-  // The code will also update box sizes for moof_ and its child boxes.
-  uint64_t data_offset = moof_->ComputeSize() + mdat.HeaderSize();
-  // 'traf' should follow 'mfhd' moof header box.
-  uint64_t next_traf_position = moof_->HeaderSize() + moof_->header.box_size();
-  for (size_t i = 0; i < moof_->tracks.size(); ++i) {
-    TrackFragment& traf = moof_->tracks[i];
-    if (traf.auxiliary_offset.offsets.size() > 0) {
-      DCHECK_EQ(traf.auxiliary_offset.offsets.size(), 1u);
-      DCHECK(!traf.sample_encryption.sample_encryption_entries.empty());
-
-      next_traf_position += traf.box_size();
-      // SampleEncryption 'senc' box should be the last box in 'traf'.
-      // |auxiliary_offset| should point to the data of SampleEncryption.
-      traf.auxiliary_offset.offsets[0] =
-          next_traf_position - traf.sample_encryption.box_size() +
-          traf.sample_encryption.HeaderSize() +
-          sizeof(uint32_t);  // for sample count field in 'senc'
-    }
-    traf.runs[0].data_offset = data_offset + mdat.data_size;
-    mdat.data_size += static_cast<uint32_t>(fragmenters_[i]->data()->Size());
-  }
-
-  // Generate segment reference.
-  sidx_->references.resize(sidx_->references.size() + 1);
-  fragmenters_[GetReferenceStreamId()]->GenerateSegmentReference(
-      &sidx_->references[sidx_->references.size() - 1]);
-  sidx_->references[sidx_->references.size() - 1].referenced_size =
-      data_offset + mdat.data_size;
-
   const uint64_t moof_start_offset = fragment_buffer_->Size();
-
-  // Write the fragment to buffer.
-  moof_->Write(fragment_buffer_.get());
-  mdat.WriteHeader(fragment_buffer_.get());
-
   bool first_key_frame = true;
   for (const std::unique_ptr<Fragmenter>& fragmenter : fragmenters_) {
     // https://goo.gl/xcFus6 6. Trick play requirements
@@ -216,7 +180,14 @@ Status Segmenter::FinalizeSegment(size_t stream_id,
           {key_frame_info.timestamp, moof_start_offset,
            fragment_buffer_->Size() - moof_start_offset + key_frame_info.size});
     }
-    fragment_buffer_->AppendBuffer(*fragmenter->data());
+    fragment_buffer_->AppendBuffer(*fragmenter->fragment());
+
+    // Generate segment reference.
+    sidx_->references.resize(sidx_->references.size() + 1);
+    fragmenters_[GetReferenceStreamId()]->GenerateSegmentReference(
+        &sidx_->references[sidx_->references.size() - 1]);
+    sidx_->references[sidx_->references.size() - 1].referenced_size +=
+        fragmenter->fragment()->Size();
   }
 
   // Increase sequence_number for next fragment.
