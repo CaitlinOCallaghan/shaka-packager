@@ -165,6 +165,10 @@ Status Segmenter::FinalizeSegment(size_t stream_id,
       return Status::OK;
   }
 
+  // Set the moof offset. Note this value will always equal '0' with the
+  // current implementation because of the assumption that each segment only 
+  // contains one fragment. Therefore, the moof will always be at the start 
+  // of the segment. 
   const uint64_t moof_start_offset = fragment_buffer_->Size();
   bool first_key_frame = true;
   for (const std::unique_ptr<Fragmenter>& fragmenter : fragmenters_) {
@@ -187,7 +191,7 @@ Status Segmenter::FinalizeSegment(size_t stream_id,
     sidx_->references.resize(sidx_->references.size() + 1);
     fragmenters_[GetReferenceStreamId()]->GenerateSegmentReference(
         &sidx_->references[sidx_->references.size() - 1]);
-    sidx_->references[sidx_->references.size() - 1].referenced_size +=
+    sidx_->references[sidx_->references.size() - 1].referenced_size =
         fragmenter->fragment()->Size();
   }
 
