@@ -178,7 +178,8 @@ Status Segmenter::FinalizeSegment(size_t stream_id,
       first_key_frame = false;
       key_frame_infos_.push_back(
           {key_frame_info.timestamp, moof_start_offset,
-           fragment_buffer_->Size() - moof_start_offset + key_frame_info.size});
+           (fragmenter->fragment()->Size() - fragmenter->data()->Size() 
+            - moof_start_offset + key_frame_info.size)});
     }
     fragment_buffer_->AppendBuffer(*fragmenter->fragment());
 
