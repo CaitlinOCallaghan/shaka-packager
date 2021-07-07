@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "packager/base/logging.h"
+#include "packager/media/formats/mp4/box_definitions.h"
 #include "packager/status.h"
 
 namespace shaka {
@@ -32,10 +33,12 @@ class Fragmenter {
  public:
   /// @param info contains stream information.
   /// @param traf points to a TrackFragment box.
+  /// @param moof points to the moof MetaData
   /// @param edit_list_offset is the edit list offset that is encoded in Edit
   ///        List. It should be 0 if there is no EditList.
   Fragmenter(std::shared_ptr<const StreamInfo> info,
              TrackFragment* traf,
+             MovieFragment* moof,
              int64_t edit_list_offset);
 
   ~Fragmenter();
@@ -67,6 +70,7 @@ class Fragmenter {
   bool fragment_initialized() const { return fragment_initialized_; }
   bool fragment_finalized() const { return fragment_finalized_; }
   BufferWriter* data() { return data_.get(); }
+  BufferWriter* fragment() { return fragment_.get(); }
   const std::vector<KeyFrameInfo>& key_frame_infos() const {
     return key_frame_infos_;
   }
@@ -87,6 +91,7 @@ class Fragmenter {
 
   std::shared_ptr<const StreamInfo> stream_info_;
   TrackFragment* traf_ = nullptr;
+  MovieFragment* moof_ = nullptr;
   int64_t edit_list_offset_ = 0;
   int64_t seek_preroll_ = 0;
   bool fragment_initialized_ = false;
@@ -95,6 +100,7 @@ class Fragmenter {
   int64_t earliest_presentation_time_ = 0;
   int64_t first_sap_time_ = 0;
   std::unique_ptr<BufferWriter> data_;
+  std::unique_ptr<BufferWriter> fragment_;
   // Saves key frames information, for Video.
   std::vector<KeyFrameInfo> key_frame_infos_;
 
