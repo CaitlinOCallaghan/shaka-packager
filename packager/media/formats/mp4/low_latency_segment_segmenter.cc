@@ -79,6 +79,10 @@ Status LowLatencySegmentSegmenter::DoFinalizeChunk() {
   return WriteChunk();
 }
 
+Status LowLatencySegmentSegmenter::DoFinalizeSubSegment() {
+  return WriteSubSegment();
+}
+
 Status LowLatencySegmentSegmenter::WriteInitSegment() {
   DCHECK(ftyp());
   DCHECK(moov());
