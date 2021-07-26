@@ -80,7 +80,7 @@ Status LowLatencySegmentSegmenter::DoFinalizeChunk() {
 }
 
 Status LowLatencySegmentSegmenter::DoFinalizeSubSegment() {
-  return WriteSubSegment();
+  return WriteChunk(false);
 }
 
 Status LowLatencySegmentSegmenter::WriteInitSegment() {
@@ -133,7 +133,6 @@ Status LowLatencySegmentSegmenter::WriteInitialChunk() {
 
   const size_t segment_header_size = buffer->Size();
   const size_t segment_size = segment_header_size + fragment_buffer()->Size();
-  DCHECK_NE(segment_size, 0u);
 
   RETURN_IF_ERROR(buffer->WriteToFile(segment_file_.get()));
   if (muxer_listener()) {
