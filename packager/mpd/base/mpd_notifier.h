@@ -72,6 +72,13 @@ class MpdNotifier {
   ///         specified by @a container_id does not exist.
   virtual bool NotifySegmentDuration(uint32_t container_id) { return true; }
 
+  /// Record the duration of a segment for Low Latency DASH streaming.
+  /// @param container_id Container ID obtained from calling
+  ///        NotifyNewContainer().
+  /// @return true on success, false otherwise. This may fail if the container
+  ///         specified by @a container_id does not exist.
+  virtual bool NotifySegmentDuration(uint32_t container_id) {return true;}
+
   /// Notifies MpdBuilder that there is a new segment ready. For live, this
   /// is usually a new segment, for VOD this is usually a subsegment.
   /// @param container_id Container ID obtained from calling
@@ -132,6 +139,11 @@ class MpdNotifier {
   /// @return The value of dash_force_segment_list flag
   bool use_segment_list() const {
     return mpd_options_.mpd_params.use_segment_list;
+  }
+
+  /// @return The value of target_segment_duration flag
+  double target_segment_duration() const {
+    return mpd_options_.mpd_params.target_segment_duration;
   }
 
  private:

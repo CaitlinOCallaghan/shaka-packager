@@ -80,7 +80,7 @@ Status LowLatencySegmentSegmenter::DoFinalizeChunk() {
 }
 
 Status LowLatencySegmentSegmenter::DoFinalizeSubSegment() {
-  if (is_initial_chunk_) {
+  if (is_initial_chunk_in_seg) {
     return WriteInitialChunk();
   }
   return WriteChunk(false);
