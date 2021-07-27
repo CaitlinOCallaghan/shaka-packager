@@ -80,10 +80,10 @@ Status LowLatencySegmentSegmenter::DoFinalizeChunk() {
 }
 
 Status LowLatencySegmentSegmenter::DoFinalizeChunk() {
-  if (is_initial_chunk_in_seg) {
+  if (is_initial_chunk_in_seg_) {
     return WriteInitialChunk();
   }
-  return WriteChunk(false);
+  return WriteChunk();
 }
 
 Status LowLatencySegmentSegmenter::WriteInitSegment() {
@@ -199,6 +199,22 @@ Status LowLatencySegmentSegmenter::FinalizeSegment() {
   is_initial_chunk_in_seg_ = true;
   num_segments_++;
 
+  return Status::OK;
+}
+
+Status LowLatencySegmentSegmenter::FinalizeSegment() {
+  // Close the file now that the final chunk has been written
+  if (!segment_file_->Close()) {
+    return Status(
+        error::FILE_FAILURE,
+        "Cannot close file " + file_name_ +
+            ", possibly file permission issue or running out of disk space.");
+  }
+
+  // Current segment is complete. Reset state in preparation for the next segment.
+  is_initial_chunk_in_seg_ = true;
+  num_segments_++;
+  
   return Status::OK;
 }
 

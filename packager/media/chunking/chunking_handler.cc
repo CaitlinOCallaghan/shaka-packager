@@ -131,24 +131,15 @@ Status ChunkingHandler::OnMediaSample(
       !chunking_params_.low_latency_dash_mode) {
     const bool can_start_new_subsegment =
         sample->is_key_frame() || !chunking_params_.subsegment_sap_aligned;
-
-    // Determine whether we are creating a new subsegment or not.
-    // Update current_subsegment_index_ appropriately if we are
-    // creating a new subsegment.
-    if (will_start_new_subsegment) {
-      current_subsegment_index_++;
-    } else if (can_start_new_subsegment) {
+    if (can_start_new_subsegment) {
       const int64_t subsegment_index =
           (timestamp - segment_start_time_.value()) / subsegment_duration_;
       if (IsNewSegmentIndex(subsegment_index, current_subsegment_index_)) {
-        will_start_new_subsegment = true;
         current_subsegment_index_ = subsegment_index;
-      }
-    } 
 
-    if (will_start_new_subsegment) {
-      RETURN_IF_ERROR(EndSubsegmentIfStarted());
-      subsegment_start_time_ = timestamp;
+        RETURN_IF_ERROR(EndSubsegmentIfStarted());
+        subsegment_start_time_ = timestamp;
+      }
     }
   }
 
