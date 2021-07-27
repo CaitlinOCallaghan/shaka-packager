@@ -241,8 +241,8 @@ Status Segmenter::FinalizeSegment(size_t stream_id,
     key_frame_infos_.clear();
     return status;
   } else if (options_.mp4_params.is_low_latency_dash) {
-    // Finalize the finished chunk for the low latency case
-    return DoFinalizeSubSegment();
+    // Finalize the completed chunk for the Low Latency case.
+    return DoFinalizeChunk();
   }
   return Status::OK;
 }

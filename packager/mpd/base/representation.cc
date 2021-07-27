@@ -9,7 +9,6 @@
 #include <gflags/gflags.h>
 
 #include <algorithm>
-#include <math.h> 
 
 #include "packager/base/logging.h"
 #include "packager/base/strings/stringprintf.h"
