@@ -204,6 +204,7 @@ Status LowLatencySegmentSegmenter::FinalizeSegment() {
 
 Status LowLatencySegmentSegmenter::FinalizeSegment() {
   // Close the file now that the final chunk has been written
+  LOG(INFO) << "finalizing segment";
   if (!segment_file_->Close()) {
     return Status(
         error::FILE_FAILURE,
