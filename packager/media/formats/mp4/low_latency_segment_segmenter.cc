@@ -214,7 +214,7 @@ Status LowLatencySegmentSegmenter::FinalizeSegment() {
   // Current segment is complete. Reset state in preparation for the next segment.
   is_initial_chunk_in_seg_ = true;
   num_segments_++;
-  
+
   return Status::OK;
 }
 

@@ -481,7 +481,8 @@ bool RepresentationXmlNode::AddLiveOnlyInfo(
   if (media_info.has_availability_time_offset()) {
     // Set the availabilityTimeOffset to the precision of 3 decimal places.
     RCHECK(segment_template.SetFloatingPointAttribute(
-        "availabilityTimeOffset", round(media_info.availability_time_offset()*1000)/1000));
+        "availabilityTimeOffset",
+        round(media_info.availability_time_offset() * 1000) / 1000));
   }
 
   if (media_info.has_init_segment_url()) {
