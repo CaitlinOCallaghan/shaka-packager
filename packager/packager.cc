@@ -394,7 +394,7 @@ Status ValidateParams(const PackagingParams& packaging_params,
                   "--utc_timings must be be set "
                   "if --is_low_latency_dash is enabled.");
   }
-
+  
   return Status::OK;
 }
 
