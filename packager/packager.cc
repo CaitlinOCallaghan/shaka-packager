@@ -386,7 +386,7 @@ Status ValidateParams(const PackagingParams& packaging_params,
                   "--fragment_duration cannot be set "
                   "if --is_low_latency_dash is enabled.");
   }
-
+ 
   if (packaging_params.mpd_params.is_low_latency_dash && 
       packaging_params.mpd_params.utc_timings.empty()) {
     // Low latency DASH MPD requires a UTC Timing value
@@ -394,7 +394,7 @@ Status ValidateParams(const PackagingParams& packaging_params,
                   "--utc_timings must be be set "
                   "if --is_low_latency_dash is enabled.");
   }
-  
+
   return Status::OK;
 }
 
