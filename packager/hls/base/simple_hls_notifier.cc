@@ -523,6 +523,7 @@ bool SimpleHlsNotifier::NotifyEncryptionUpdate(
 }
 
 bool SimpleHlsNotifier::Flush() {
+  LOG(INFO) << "FLUSHING";
   base::AutoLock auto_lock(lock_);
   for (MediaPlaylist* playlist : media_playlists_) {
     playlist->SetTargetDuration(target_duration_);

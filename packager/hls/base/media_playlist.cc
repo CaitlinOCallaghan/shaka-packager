@@ -136,10 +136,10 @@ std::string CreatePlaylistHeader(
         base::StringAppendF(&header, "#EXT-X-MEDIA-SEQUENCE:%d\n",
                             media_sequence_number);
       }
-      if (discontinuity_sequence_number > 0) {
-        base::StringAppendF(&header, "#EXT-X-DISCONTINUITY-SEQUENCE:%d\n",
-                            discontinuity_sequence_number);
-      }
+      // if (discontinuity_sequence_number > 0) {
+      //   base::StringAppendF(&header, "#EXT-X-DISCONTINUITY-SEQUENCE:%d\n",
+      //                       discontinuity_sequence_number);
+      // }
       break;
     default:
       NOTREACHED() << "Unexpected MediaPlaylistType " << static_cast<int>(type);
@@ -221,7 +221,7 @@ std::string SegmentInfoEntry::ToString() {
 
   if (!is_partial_segment_) {
     LOG(INFO) << "Not partial";
-    result = base::StringPrintf("#EXTINF:%.3f", duration_seconds_);
+    result = base::StringPrintf("#EXTINF:%.3f,", duration_seconds_);
 
     if (use_byte_range_) {
       base::StringAppendF(&result, "\n#EXT-X-BYTERANGE:%" PRIu64,
@@ -229,8 +229,9 @@ std::string SegmentInfoEntry::ToString() {
       if (previous_segment_end_offset_ + 1 != start_byte_offset_) {
         base::StringAppendF(&result, "@%" PRIu64, start_byte_offset_);
       }
-      base::StringAppendF(&result, "\n%s", file_name_.c_str());
     }
+    base::StringAppendF(&result, "\n%s", file_name_.c_str());
+
   } else {
     result = base::StringPrintf("#EXT-X-PART:DURATION=%.3f,URI=\"%s\",", duration_seconds_, file_name_.c_str());
     base::StringAppendF(&result, "BYTERANGE:\"%" PRIu64,
@@ -366,8 +367,8 @@ MediaPlaylist::MediaPlaylist(const HlsParams& hls_params,
       group_id_(group_id),
       media_sequence_number_(hls_params_.media_sequence_number) {
         // When there's a forced media_sequence_number, start with discontinuity
-        if (media_sequence_number_ > 0)
-          entries_.emplace_back(new DiscontinuityEntry());
+        // if (media_sequence_number_ > 0)
+        //   entries_.emplace_back(new DiscontinuityEntry());
       }
 
 MediaPlaylist::~MediaPlaylist() {}
@@ -508,9 +509,9 @@ void MediaPlaylist::AddEncryptionInfo(MediaPlaylist::EncryptionMethod method,
   if (!inserted_discontinuity_tag_) {
     // Insert discontinuity tag only for the first EXT-X-KEY, only if there
     // are non-encrypted media segments.
-    if (!entries_.empty())
-      entries_.emplace_back(new DiscontinuityEntry());
-    inserted_discontinuity_tag_ = true;
+    // if (!entries_.empty())
+    //   entries_.emplace_back(new DiscontinuityEntry());
+    // inserted_discontinuity_tag_ = true;
   }
   entries_.emplace_back(new EncryptionInfoEntry(
       method, url, key_id, iv, key_format, key_format_versions));
@@ -660,18 +661,18 @@ void MediaPlaylist::AddSegmentInfoEntry(const std::string& segment_file_name,
   bandwidth_estimator_.AddBlock(size, segment_duration_seconds);
   current_buffer_depth_ += segment_duration_seconds;
 
-  if (!entries_.empty() &&
-      entries_.back()->type() == HlsEntry::EntryType::kExtInf) {
-    const SegmentInfoEntry* segment_info =
-        static_cast<SegmentInfoEntry*>(entries_.back().get());
-    if (segment_info->start_time() > start_time) {
-      LOG(WARNING)
-          << "Insert a discontinuity tag after the segment with start time "
-          << segment_info->start_time() << " as the next segment starts at "
-          << start_time << ".";
-      entries_.emplace_back(new DiscontinuityEntry());
-    }
-  }
+  // if (!entries_.empty() &&
+  //     entries_.back()->type() == HlsEntry::EntryType::kExtInf) {
+    // const SegmentInfoEntry* segment_info =
+    //     static_cast<SegmentInfoEntry*>(entries_.back().get());
+    // if (segment_info->start_time() > start_time) {
+    //   LOG(WARNING)
+    //       << "Insert a discontinuity tag after the segment with start time "
+    //       << segment_info->start_time() << " as the next segment starts at "
+    //       << start_time << ".";
+    //   entries_.emplace_back(new DiscontinuityEntry());
+    // }
+  // }
   LOG(INFO) << "Adding segment info entry 2.0";
   LOG(INFO) << "partial " << is_partial_segment;
   entries_.emplace_back(new SegmentInfoEntry(

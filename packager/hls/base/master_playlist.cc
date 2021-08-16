@@ -505,6 +505,7 @@ bool MasterPlaylist::WriteMasterPlaylist(
   if (is_independent_segments_) {
     content.append("\n#EXT-X-INDEPENDENT-SEGMENTS\n");
   }
+  LOG(INFO) << "Writing master";
   AppendPlaylists(default_audio_language_, default_text_language_, base_url,
                   playlists, &content);
 
