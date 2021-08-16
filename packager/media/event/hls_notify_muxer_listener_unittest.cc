@@ -47,6 +47,13 @@ class MockHlsNotifier : public hls::HlsNotifier {
                     int64_t duration,
                     uint64_t start_byte_offset,
                     uint64_t size));
+  MOCK_METHOD6(NotifyNewPartialSegment,
+               bool(uint32_t stream_id,
+                    const std::string& segment_name,
+                    int64_t start_time,
+                    int64_t duration,
+                    uint64_t start_byte_offset,
+                    uint64_t size));
   MOCK_METHOD4(NotifyKeyFrame,
                bool(uint32_t stream_id,
                     int64_t timestamp,

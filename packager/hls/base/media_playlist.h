@@ -118,6 +118,12 @@ class MediaPlaylist {
                           uint64_t start_byte_offset,
                           uint64_t size);
 
+  virtual void AddPartialSegment(const std::string& file_name,
+                          int64_t start_time,
+                          int64_t duration,
+                          uint64_t start_byte_offset,
+                          uint64_t size);
+
   /// Keyframes must be added in order. It is also called before the containing
   /// segment being called.
   /// @param timestamp is the timestamp of the key frame in timescale of the
@@ -236,7 +242,8 @@ class MediaPlaylist {
                            int64_t start_time,
                            int64_t duration,
                            uint64_t start_byte_offset,
-                           uint64_t size);
+                           uint64_t size,
+                           bool is_partial_segment = false);
   // Adjust the duration of the last SegmentInfoEntry to end on
   // |next_timestamp|.
   void AdjustLastSegmentInfoEntryDuration(int64_t next_timestamp);

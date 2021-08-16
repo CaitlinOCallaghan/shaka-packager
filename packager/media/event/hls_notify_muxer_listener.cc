@@ -229,6 +229,7 @@ void HlsNotifyMuxerListener::OnNewSegment(const std::string& file_name,
                                           int64_t start_time,
                                           int64_t duration,
                                           uint64_t segment_file_size) {
+  LOG(INFO) << "On a new segment";
   if (!media_info_->has_segment_template()) {
     EventInfo event_info;
     event_info.type = EventInfoType::kSegment;
@@ -240,6 +241,27 @@ void HlsNotifyMuxerListener::OnNewSegment(const std::string& file_name,
     const bool result = hls_notifier_->NotifyNewSegment(
         stream_id_.value(), file_name, start_time, duration,
         kStartingByteOffset, segment_file_size);
+    LOG_IF(WARNING, !result) << "Failed to add new segment.";
+  }
+}
+
+void HlsNotifyMuxerListener::OnNewPartialSegment(const std::string& file_name,
+                                          int64_t start_time,
+                                          int64_t duration,
+                                          uint64_t segment_file_size,
+                                          uint64_t start_byte_offset) {
+  LOG(INFO) << "On a new segment";
+  if (!media_info_->has_segment_template()) {
+    EventInfo event_info;
+    event_info.type = EventInfoType::kSegment;
+    event_info.segment_info = {start_time, duration, segment_file_size};
+    event_info_.push_back(event_info);
+  } else {
+    // For multisegment, it always starts from the beginning of the file.
+    // const size_t kStartingByteOffset = 0u;
+    const bool result = hls_notifier_->NotifyNewPartialSegment(
+        stream_id_.value(), file_name, start_time, duration,
+        start_byte_offset, segment_file_size);
     LOG_IF(WARNING, !result) << "Failed to add new segment.";
   }
 }

@@ -93,6 +93,10 @@ class MpdNotifier {
                                 int64_t start_time,
                                 int64_t duration,
                                 uint64_t size) = 0;
+  // virtual bool NotifyNewPartialSegment(uint32_t container_id,
+  //                               int64_t start_time,
+  //                               int64_t duration,
+  //                               uint64_t size) = 0;
 
   /// Notifies MpdBuilder that there is a new CueEvent.
   /// @param container_id Container ID obtained from calling

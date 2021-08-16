@@ -295,7 +295,7 @@ Status MP4Muxer::DelayInitializeMuxer() {
       }
     }
   }
-
+  LOG(INFO) << "MUXCER";
   if (options().segment_template.empty()) {
     segmenter_.reset(new SingleSegmentSegmenter(options(), std::move(ftyp),
                                                 std::move(moov)));
@@ -303,6 +303,8 @@ Status MP4Muxer::DelayInitializeMuxer() {
     segmenter_.reset(new LowLatencySegmentSegmenter(options(), std::move(ftyp),
                                                     std::move(moov)));
   } else {
+    LOG(INFO) << "MULTI";
+
     segmenter_.reset(
         new MultiSegmentSegmenter(options(), std::move(ftyp), std::move(moov)));
   }

@@ -54,6 +54,7 @@ class LowLatencySegmentSegmenter : public Segmenter {
   Status FinalizeSegment();
 
   uint64_t GetSegmentDuration();
+  uint64_t GetPartialSegmentDuration();
 
   std::unique_ptr<SegmentType> styp_;
   uint32_t num_segments_;
@@ -61,6 +62,8 @@ class LowLatencySegmentSegmenter : public Segmenter {
   bool ll_dash_mpd_values_initialized_ = false;
   std::unique_ptr<File, FileCloser> segment_file_;
   std::string file_name_;
+  size_t segment_size_;
+  
 
   DISALLOW_COPY_AND_ASSIGN(LowLatencySegmentSegmenter);
 };

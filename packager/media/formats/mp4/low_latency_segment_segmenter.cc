@@ -135,8 +135,8 @@ Status LowLatencySegmentSegmenter::WriteInitialChunk() {
   styp_->Write(buffer.get());
 
   const size_t segment_header_size = buffer->Size();
-  const size_t segment_size = segment_header_size + fragment_buffer()->Size();
-  DCHECK_NE(segment_size, 0u);
+  segment_size_ = segment_header_size + fragment_buffer()->Size();
+  DCHECK_NE(segment_size_, 0u);
 
   RETURN_IF_ERROR(buffer->WriteToFile(segment_file_.get()));
   if (muxer_listener()) {
@@ -165,9 +165,9 @@ Status LowLatencySegmentSegmenter::WriteInitialChunk() {
     }
     // Add the current segment in the manifest.
     // Following chunks will be appended to the open segment file.
-    muxer_listener()->OnNewSegment(file_name_,
+    muxer_listener()->OnNewPartialSegment(file_name_,
                                    sidx()->earliest_presentation_time,
-                                   segment_duration, segment_size);
+                                   sample_duration(), segment_size_, 0u);
     is_initial_chunk_in_seg_ = false;
   }
 
@@ -176,16 +176,37 @@ Status LowLatencySegmentSegmenter::WriteInitialChunk() {
 
 Status LowLatencySegmentSegmenter::WriteChunk() {
   DCHECK(fragment_buffer());
+  uint64_t start_byte_offset = segment_size_;
+  segment_size_ += fragment_buffer()->Size();
 
   // Write the chunk data to the file
   RETURN_IF_ERROR(fragment_buffer()->WriteToFile(segment_file_.get()));
 
   UpdateProgress(GetSegmentDuration());
 
+  LOG(INFO) << "Seg duration " << GetSegmentDuration();
+  LOG(INFO) << "sample_duration() " << sample_duration();
+  LOG(INFO) << "Partial seg duration " << GetPartialSegmentDuration();
+  LOG(INFO) << "Seg size" << segment_size_;
+  LOG(INFO) << "start_byte_offset" << start_byte_offset;
+
+
+  LOG(INFO) << "start time " << GetSegmentDuration();
+  LOG(INFO) << "duration of seg " << sample_duration();
+  LOG(INFO) << "segment_file_size " << GetPartialSegmentDuration();
+  LOG(INFO) << "Seg size" << segment_size_;
+
+  muxer_listener()->OnNewPartialSegment(file_name_,
+                                   start_byte_offset,
+                                   sample_duration(),
+                                   segment_size_,
+                                   start_byte_offset);
+
   return Status::OK;
 }
 
 Status LowLatencySegmentSegmenter::FinalizeSegment() {
+  LOG(INFO) << "finalizing";
   // Close the file now that the final chunk has been written
   if (!segment_file_.release()->Close()) {
     return Status(
@@ -194,10 +215,15 @@ Status LowLatencySegmentSegmenter::FinalizeSegment() {
             ", possibly file permission issue or running out of disk space.");
   }
 
+  muxer_listener()->OnNewSegment(file_name_,
+                                   sidx()->earliest_presentation_time,
+                                   GetSegmentDuration(), segment_size_);
+
   // Current segment is complete. Reset state in preparation for the next
   // segment.
   is_initial_chunk_in_seg_ = true;
   num_segments_++;
+  segment_size_ = 0u;
 
   return Status::OK;
 }
@@ -228,6 +254,10 @@ uint64_t LowLatencySegmentSegmenter::GetSegmentDuration() {
     segment_duration += sidx()->references[i].subsegment_duration;
 
   return segment_duration;
+}
+
+uint64_t LowLatencySegmentSegmenter::GetPartialSegmentDuration() {
+  return sidx()->references[sidx()->references.size()].subsegment_duration;
 }
 
 }  // namespace mp4

@@ -57,6 +57,12 @@ class SimpleHlsNotifier : public HlsNotifier {
                         int64_t duration,
                         uint64_t start_byte_offset,
                         uint64_t size) override;
+  bool NotifyNewPartialSegment(uint32_t stream_id,
+                        const std::string& segment_name,
+                        int64_t start_time,
+                        int64_t duration,
+                        uint64_t start_byte_offset,
+                        uint64_t size) override;
   bool NotifyKeyFrame(uint32_t stream_id,
                       int64_t timestamp,
                       uint64_t start_byte_offset,

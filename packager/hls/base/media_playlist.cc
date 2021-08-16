@@ -170,7 +170,8 @@ class SegmentInfoEntry : public HlsEntry {
                    bool use_byte_range,
                    uint64_t start_byte_offset,
                    uint64_t segment_file_size,
-                   uint64_t previous_segment_end_offset);
+                   uint64_t previous_segment_end_offset,
+                   bool is_partial_segment);
 
   std::string ToString() override;
   int64_t start_time() const { return start_time_; }
@@ -190,6 +191,7 @@ class SegmentInfoEntry : public HlsEntry {
   const uint64_t start_byte_offset_;
   const uint64_t segment_file_size_;
   const uint64_t previous_segment_end_offset_;
+  const bool is_partial_segment_;
 };
 
 SegmentInfoEntry::SegmentInfoEntry(const std::string& file_name,
@@ -198,7 +200,8 @@ SegmentInfoEntry::SegmentInfoEntry(const std::string& file_name,
                                    bool use_byte_range,
                                    uint64_t start_byte_offset,
                                    uint64_t segment_file_size,
-                                   uint64_t previous_segment_end_offset)
+                                   uint64_t previous_segment_end_offset,
+                                   bool is_partial_segment = false)
     : HlsEntry(HlsEntry::EntryType::kExtInf),
       file_name_(file_name),
       start_time_(start_time),
@@ -206,21 +209,38 @@ SegmentInfoEntry::SegmentInfoEntry(const std::string& file_name,
       use_byte_range_(use_byte_range),
       start_byte_offset_(start_byte_offset),
       segment_file_size_(segment_file_size),
-      previous_segment_end_offset_(previous_segment_end_offset) {}
+      previous_segment_end_offset_(previous_segment_end_offset),
+      is_partial_segment_(is_partial_segment) {}
 
 std::string SegmentInfoEntry::ToString() {
-  std::string result = base::StringPrintf("#EXTINF:%.3f,", duration_seconds_);
+  std::string result;
+  LOG(INFO) << "start " << start_time_;
+  LOG(INFO) << "duration_seconds_ " << duration_seconds_;
+  LOG(INFO) << "start_byte_offset_ " << start_byte_offset_;
+  
 
-  if (use_byte_range_) {
-    base::StringAppendF(&result, "\n#EXT-X-BYTERANGE:%" PRIu64,
-                        segment_file_size_);
-    if (previous_segment_end_offset_ + 1 != start_byte_offset_) {
-      base::StringAppendF(&result, "@%" PRIu64, start_byte_offset_);
+  if (!is_partial_segment_) {
+    LOG(INFO) << "Not partial";
+    result = base::StringPrintf("#EXTINF:%.3f", duration_seconds_);
+
+    if (use_byte_range_) {
+      base::StringAppendF(&result, "\n#EXT-X-BYTERANGE:%" PRIu64,
+                          segment_file_size_);
+      if (previous_segment_end_offset_ + 1 != start_byte_offset_) {
+        base::StringAppendF(&result, "@%" PRIu64, start_byte_offset_);
+      }
+      base::StringAppendF(&result, "\n%s", file_name_.c_str());
     }
+  } else {
+    result = base::StringPrintf("#EXT-X-PART:DURATION=%.3f,URI=\"%s\",", duration_seconds_, file_name_.c_str());
+    base::StringAppendF(&result, "BYTERANGE:\"%" PRIu64,
+                        segment_file_size_);
+    base::StringAppendF(&result, "@%" PRIu64, start_byte_offset_);
+    base::StringAppendF(&result, "\"");
+    // base::StringAppendF(&result, "HEYMAN");
+
   }
-
-  base::StringAppendF(&result, "\n%s", file_name_.c_str());
-
+  
   return result;
 }
 
@@ -410,6 +430,7 @@ void MediaPlaylist::AddSegment(const std::string& file_name,
                                int64_t duration,
                                uint64_t start_byte_offset,
                                uint64_t size) {
+  LOG(INFO) << "Adding a segment!";
   if (stream_type_ == MediaPlaylistStreamType::kVideoIFramesOnly) {
     if (key_frames_.empty())
       return;
@@ -431,6 +452,36 @@ void MediaPlaylist::AddSegment(const std::string& file_name,
   }
   return AddSegmentInfoEntry(file_name, start_time, duration, start_byte_offset,
                              size);
+}
+
+void MediaPlaylist::AddPartialSegment(const std::string& file_name,
+                               int64_t start_time,
+                               int64_t duration,
+                               uint64_t start_byte_offset,
+                               uint64_t size) {
+  LOG(INFO) << "Adding a partial segment!";
+  LOG(INFO) << "start_byte_offset playlist " << start_byte_offset;
+  // if (stream_type_ == MediaPlaylistStreamType::kVideoIFramesOnly) {
+  //   // if (key_frames_.empty())
+  //   //   return;
+
+  //   AdjustLastSegmentInfoEntryDuration(key_frames_.front().timestamp);
+
+  //   for (auto iter = key_frames_.begin(); iter != key_frames_.end(); ++iter) {
+  //     // Last entry duration may be adjusted later when the next iframe becomes
+  //     // available.
+  //     const int64_t next_timestamp = std::next(iter) == key_frames_.end()
+  //                                        ? (start_time + duration)
+  //                                        : std::next(iter)->timestamp;
+  //     AddSegmentInfoEntry(file_name, iter->timestamp,
+  //                         next_timestamp - iter->timestamp,
+  //                         iter->start_byte_offset, iter->size, true);
+  //   }
+  //   key_frames_.clear();
+  //   return;
+  // }
+  return AddSegmentInfoEntry(file_name, start_time, duration, start_byte_offset,
+                             size, true);
 }
 
 void MediaPlaylist::AddKeyFrame(int64_t timestamp,
@@ -582,14 +633,15 @@ void MediaPlaylist::AddSegmentInfoEntry(const std::string& segment_file_name,
                                         int64_t start_time,
                                         int64_t duration,
                                         uint64_t start_byte_offset,
-                                        uint64_t size) {
+                                        uint64_t size,
+                                        bool is_partial_segment) {
   if (time_scale_ == 0) {
     LOG(WARNING) << "Timescale is not set and the duration for " << duration
                  << " cannot be calculated. The output will be wrong.";
-
+    LOG(INFO) << "Adding segment info entry";
     entries_.emplace_back(new SegmentInfoEntry(
         segment_file_name, 0.0, 0.0, use_byte_range_, start_byte_offset, size,
-        previous_segment_end_offset_));
+        previous_segment_end_offset_, is_partial_segment));
     return;
   }
 
@@ -602,6 +654,7 @@ void MediaPlaylist::AddSegmentInfoEntry(const std::string& segment_file_name,
 
   const double segment_duration_seconds =
       static_cast<double>(duration) / time_scale_;
+  LOG(INFO) << "seg duration in seconds " << segment_duration_seconds;
   longest_segment_duration_seconds_ =
       std::max(longest_segment_duration_seconds_, segment_duration_seconds);
   bandwidth_estimator_.AddBlock(size, segment_duration_seconds);
@@ -619,10 +672,11 @@ void MediaPlaylist::AddSegmentInfoEntry(const std::string& segment_file_name,
       entries_.emplace_back(new DiscontinuityEntry());
     }
   }
-
+  LOG(INFO) << "Adding segment info entry 2.0";
+  LOG(INFO) << "partial " << is_partial_segment;
   entries_.emplace_back(new SegmentInfoEntry(
       segment_file_name, start_time, segment_duration_seconds, use_byte_range_,
-      start_byte_offset, size, previous_segment_end_offset_));
+      start_byte_offset, size, previous_segment_end_offset_, is_partial_segment));
   previous_segment_end_offset_ = start_byte_offset + size - 1;
 }
 

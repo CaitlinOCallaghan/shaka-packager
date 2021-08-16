@@ -65,6 +65,13 @@ class HlsNotifier {
                                 uint64_t start_byte_offset,
                                 uint64_t size) = 0;
 
+  virtual bool NotifyNewPartialSegment(uint32_t stream_id,
+                                const std::string& segment_name,
+                                int64_t start_time,
+                                int64_t duration,
+                                uint64_t start_byte_offset,
+                                uint64_t size) = 0;
+
   /// Called on every key frame. For Video only.
   /// @param stream_id is the value set by NotifyNewStream().
   /// @param timestamp is the timesamp of the key frame in timescale units
