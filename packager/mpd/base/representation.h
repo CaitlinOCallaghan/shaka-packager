@@ -101,6 +101,8 @@ class Representation {
                              int64_t duration,
                              uint64_t size);
 
+  virtual void FinalizeSegment(int64_t duration, uint64_t size);
+
   /// Set the sample duration of this Representation.
   /// Sample duration is not available right away especially for live. This
   /// allows setting the sample duration after the Representation has been
@@ -187,6 +189,10 @@ class Representation {
   // Add a SegmentInfo. This function may insert an adjusted SegmentInfo if
   // |allow_approximate_segment_timeline_| is set.
   void AddSegmentInfo(int64_t start_time, int64_t duration);
+
+  // Update the last SegmentInfo. This is for the low latency case because
+  // segment duration is not known until the last chunk is processed.
+  void UpdateSegmentInfo(int64_t duration);
 
   // Check if two timestamps are approximately equal if
   // |allow_approximate_segment_timeline_| is set; Otherwise check whether the

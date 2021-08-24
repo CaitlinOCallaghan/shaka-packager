@@ -187,8 +187,22 @@ void Representation::AddNewSegment(int64_t start_time,
     state_change_listener_->OnNewSegmentForRepresentation(start_time, duration);
 
   AddSegmentInfo(start_time, duration);
+
+  // kick out if LL mode
+  if (mpd_options_.mpd_params.low_latency_dash_mode) {
+    return;
+  }
+
   current_buffer_depth_ += segment_infos_.back().duration;
 
+  bandwidth_estimator_.AddBlock(
+      size, static_cast<double>(duration) / media_info_.reference_time_scale());
+}
+
+void Representation::FinalizeSegment(int64_t duration, uint64_t size) {
+  // Update SegmentInfo now that we know the segment's full duration
+  UpdateSegmentInfo(duration);
+  current_buffer_depth_ += segment_infos_.back().duration;
   bandwidth_estimator_.AddBlock(
       size, static_cast<double>(duration) / media_info_.reference_time_scale());
 }
@@ -356,6 +370,12 @@ bool Representation::HasRequiredMediaInfoFields() const {
   }
 
   return true;
+}
+
+void Representation::UpdateSegmentInfo(int64_t duration) {
+  if (!segment_infos_.empty()) {
+    segment_infos_.back().duration = duration;
+  }
 }
 
 void Representation::AddSegmentInfo(int64_t start_time, int64_t duration) {

@@ -204,6 +204,10 @@ void MpdNotifyMuxerListener::OnNewSegment(const std::string& file_name,
   }
 }
 
+void MpdNotifyMuxerListener::OnFinalizedLowLatencySegment(int64_t duration, uint64_t segment_file_size) {
+  mpd_notifier_->NotifyFinalizedLowLatencySegment(notification_id_.value(), duration, segment_file_size);                            
+}
+
 void MpdNotifyMuxerListener::OnKeyFrame(int64_t timestamp,
                                         uint64_t start_byte_offset,
                                         uint64_t size) {
