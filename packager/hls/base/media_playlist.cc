@@ -724,8 +724,8 @@ void MediaPlaylist::AddSegmentInfoEntry(const std::string& segment_file_name,
   previous_segment_end_offset_ = start_byte_offset + size - 1;
 }
 
-void MediaPlaylist::AddPreloadHintEntry() {
-  entries_.emplace_back(new PreloadHintEntry());
+void MediaPlaylist::AddPreloadHintEntry(const std::string& url, const std::string& byterange_start) {
+  entries_.emplace_back(new PreloadHintEntry(url, byterange_start));
 }
 
 void MediaPlaylist::RemovePreloadHintEntry() {

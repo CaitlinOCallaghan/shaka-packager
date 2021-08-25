@@ -250,6 +250,8 @@ class MediaPlaylist {
   void AdjustLastSegmentInfoEntryDuration(int64_t next_timestamp);
   // Remove elements from |entries_| for live profile. Increments
   // |sequence_number_| by the number of segments removed.
+  void AddPreloadHintEntry(const std::string& url, const std::string& byterange_start);
+  void RemovePreloadHintEntry();
   void SlideWindow();
   // Remove the segment specified by |start_time|. The actual deletion can
   // happen at a later time depending on the value of
