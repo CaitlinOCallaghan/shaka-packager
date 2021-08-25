@@ -250,7 +250,7 @@ void HlsNotifyMuxerListener::OnNewPartialSegment(const std::string& file_name,
                                           int64_t duration,
                                           uint64_t segment_file_size,
                                           uint64_t start_byte_offset) {
-  LOG(INFO) << "On a new segment";
+  LOG(INFO) << "On a new partial segment";
   if (!media_info_->has_segment_template()) {
     EventInfo event_info;
     event_info.type = EventInfoType::kSegment;

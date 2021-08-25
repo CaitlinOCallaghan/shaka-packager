@@ -30,6 +30,7 @@ class HlsEntry {
     kExtKey,
     kExtDiscontinuity,
     kExtPlacementOpportunity,
+    kExtPreloadHint,
   };
   virtual ~HlsEntry();
 

@@ -352,6 +352,39 @@ std::string PlacementOpportunityEntry::ToString() {
   return "#EXT-X-PLACEMENT-OPPORTUNITY";
 }
 
+class PreloadHintEntry : public HlsEntry {
+  public:
+  PreloadHintEntry(const std::string& url, const std::string& byterange_start);
+  std::string ToString() override;
+
+  private:
+   PreloadHintEntry(const PreloadHintEntry&) = delete;
+   PreloadHintEntry& operator=(const PreloadHintEntry&) = delete;
+   const std::string url_;
+   const std::string byterange_start_;
+};
+
+PreloadHintEntry(const std::string& url, const std::string& byterange_start)
+    : HlsEntry(HlsEntry::EntryType::kExtPreloadHint),
+      url_(url),
+      byterange_start_(byterange_start) {}
+
+std::string PreloadHintEntry::ToString() {
+
+  std::string tag_string;
+  Tag tag("#EXT-X-PRELOAD-HINT", &tag_string);
+
+  tag.AddQuotedString(",URI", url_);
+
+  tag.AddString(",BYTERANGE-START=", byterange_start_);
+
+  // if (!byterange_start_.empty()) {
+    // tag.AddString("BYTERANGE-START=", byterange_start_);
+  // }
+
+  return tag_string;
+}
+
 }  // namespace
 
 HlsEntry::HlsEntry(HlsEntry::EntryType type) : type_(type) {}
@@ -367,8 +400,8 @@ MediaPlaylist::MediaPlaylist(const HlsParams& hls_params,
       group_id_(group_id),
       media_sequence_number_(hls_params_.media_sequence_number) {
         // When there's a forced media_sequence_number, start with discontinuity
-        // if (media_sequence_number_ > 0)
-        //   entries_.emplace_back(new DiscontinuityEntry());
+        if (media_sequence_number_ > 0)
+          entries_.emplace_back(new DiscontinuityEntry());
       }
 
 MediaPlaylist::~MediaPlaylist() {}
@@ -481,8 +514,17 @@ void MediaPlaylist::AddPartialSegment(const std::string& file_name,
   //   key_frames_.clear();
   //   return;
   // }
-  return AddSegmentInfoEntry(file_name, start_time, duration, start_byte_offset,
+
+  // Remove previous hint
+  SlideWindow();
+
+  RemovePreloadHintEntry();
+
+  AddSegmentInfoEntry(file_name, start_time, duration, start_byte_offset,
                              size, true);
+  // Hint the next partial segment
+  int64_t next_start_byte_offset = duration + start_byte_offset;
+  AddPreloadHintEntry(file_name, next_start_byte_offset);
 }
 
 void MediaPlaylist::AddKeyFrame(int64_t timestamp,
@@ -509,9 +551,9 @@ void MediaPlaylist::AddEncryptionInfo(MediaPlaylist::EncryptionMethod method,
   if (!inserted_discontinuity_tag_) {
     // Insert discontinuity tag only for the first EXT-X-KEY, only if there
     // are non-encrypted media segments.
-    // if (!entries_.empty())
-    //   entries_.emplace_back(new DiscontinuityEntry());
-    // inserted_discontinuity_tag_ = true;
+    if (!entries_.empty())
+      entries_.emplace_back(new DiscontinuityEntry());
+    inserted_discontinuity_tag_ = true;
   }
   entries_.emplace_back(new EncryptionInfoEntry(
       method, url, key_id, iv, key_format, key_format_versions));
@@ -661,24 +703,35 @@ void MediaPlaylist::AddSegmentInfoEntry(const std::string& segment_file_name,
   bandwidth_estimator_.AddBlock(size, segment_duration_seconds);
   current_buffer_depth_ += segment_duration_seconds;
 
-  // if (!entries_.empty() &&
-  //     entries_.back()->type() == HlsEntry::EntryType::kExtInf) {
-    // const SegmentInfoEntry* segment_info =
-    //     static_cast<SegmentInfoEntry*>(entries_.back().get());
-    // if (segment_info->start_time() > start_time) {
-    //   LOG(WARNING)
-    //       << "Insert a discontinuity tag after the segment with start time "
-    //       << segment_info->start_time() << " as the next segment starts at "
-    //       << start_time << ".";
-    //   entries_.emplace_back(new DiscontinuityEntry());
-    // }
-  // }
+  if (!entries_.empty() &&
+      entries_.back()->type() == HlsEntry::EntryType::kExtInf) {
+    const SegmentInfoEntry* segment_info =
+        static_cast<SegmentInfoEntry*>(entries_.back().get());
+    if (segment_info->start_time() > start_time) {
+      LOG(WARNING)
+          << "Insert a discontinuity tag after the segment with start time "
+          << segment_info->start_time() << " as the next segment starts at "
+          << start_time << ".";
+      // NOTE(Caitlin): This will add Discontinuity after first partial segment
+      // entries_.emplace_back(new DiscontinuityEntry());
+    }
+  }
   LOG(INFO) << "Adding segment info entry 2.0";
   LOG(INFO) << "partial " << is_partial_segment;
   entries_.emplace_back(new SegmentInfoEntry(
       segment_file_name, start_time, segment_duration_seconds, use_byte_range_,
       start_byte_offset, size, previous_segment_end_offset_, is_partial_segment));
   previous_segment_end_offset_ = start_byte_offset + size - 1;
+}
+
+void MediaPlaylist::AddPreloadHintEntry() {
+  entries_.emplace_back(new PreloadHintEntry());
+}
+
+void MediaPlaylist::RemovePreloadHintEntry() {
+  if (entries_.back()->type() == HlsEntry::EntryType::kExtPreloadHint) {
+    entries_.pop_back();
+  }
 }
 
 void MediaPlaylist::AdjustLastSegmentInfoEntryDuration(int64_t next_timestamp) {
