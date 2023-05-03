@@ -89,12 +89,17 @@ std::string AV1CodecConfigurationRecord::GetCodecString() const {
                             tier_ ? 'H' : 'M', bit_depth_);
 }
 
-std::string AV1CodecConfigurationRecord::GetCodecString(uint16_t color_primaries, uint16_t transfer_characteristics, uint16_t matrix_coefficients) const {
+std::string AV1CodecConfigurationRecord::GetCodecString(
+    uint16_t color_primaries,
+    uint16_t transfer_characteristics,
+    uint16_t matrix_coefficients,
+    uint16_t video_full_range_flag) const {
   VLOG(2) << "AV1CodecConfigurationRecord::GetCodecString";
-  return base::StringPrintf("av01.%d.%02d%c.%02d.%d.%d%d%d.%02d.%02d.%02d", profile_, level_,
-                            tier_ ? 'H' : 'M', bit_depth_, mono_chrome_,
-                            chroma_subsampling_x_, chroma_subsampling_y_,
-                            chroma_sample_position_, color_primaries, transfer_characteristics, matrix_coefficients);
+  return base::StringPrintf(
+      "av01.%d.%02d%c.%02d.%d.%d%d%d.%02d.%02d.%02d.%d", profile_, level_,
+      tier_ ? 'H' : 'M', bit_depth_, mono_chrome_, chroma_subsampling_x_,
+      chroma_subsampling_y_, chroma_sample_position_, color_primaries,
+      transfer_characteristics, matrix_coefficients, video_full_range_flag);
 }
 
 }  // namespace media
