@@ -1470,31 +1470,33 @@ FourCC ColorParameters::BoxType() const {
 }
 
 bool ColorParameters::ReadWriteInternal(BoxBuffer* buffer) {
-  RCHECK(ReadWriteHeaderInternal(buffer) &&
-         buffer->ReadWriteFourCC(&color_parameter_type) &&
-         buffer->ReadWriteUInt16(&color_primaries) &&
-         buffer->ReadWriteUInt16(&transfer_characteristics) &&
-         buffer->ReadWriteUInt16(&matrix_coefficients));
-  // Type nclc does not contain video_full_range_flag data, and thus, it has 1
-  // less byte than nclx. Only extract video_full_range_flag if of type nclx.
-  if (color_parameter_type == FOURCC_nclx) {
-    RCHECK(buffer->ReadWriteUInt8(&video_full_range_flag));
+  if (buffer->Reading()) {
+    BoxReader* reader = buffer->reader();
+    DCHECK(reader);
+
+    // Parse and store the raw box for colr atom preservation in the output mp4.
+    raw_box.assign(reader->data(), reader->data() + reader->size());
+
+    // Parse individual parameters for full codec string formation.
+    RCHECK(reader->ReadFourCC(&color_parameter_type) &&
+           reader->Read2(&color_primaries) &&
+           reader->Read2(&transfer_characteristics) &&
+           reader->Read2(&matrix_coefficients));
+    // Type nclc does not contain video_full_range_flag data, and thus, it has 1
+    // less byte than nclx. Only extract video_full_range_flag if of type nclx.
+    if (color_parameter_type == FOURCC_nclx) {
+      RCHECK(reader->Read1(&video_full_range_flag));
+    }
+  } else {
+    // When writing, only need to write the raw_box.
+    DCHECK(!raw_box.empty());
+    buffer->writer()->AppendVector(raw_box);
   }
   return true;
 }
 
 size_t ColorParameters::ComputeSizeInternal() {
-  if (color_parameter_type == FOURCC_NULL) {
-    // This box is optional. Skip it if it is not initialized.
-    return 0;
-  } else if (color_parameter_type == FOURCC_nclc) {
-    // Type nclc does not contain video_full_range_flag data.
-    return HeaderSize() + kFourCCSize + sizeof(color_primaries) +
-           sizeof(transfer_characteristics) + sizeof(matrix_coefficients);
-  }
-  return HeaderSize() + kFourCCSize + sizeof(color_primaries) +
-         sizeof(transfer_characteristics) + sizeof(matrix_coefficients) +
-         sizeof(video_full_range_flag);
+  return raw_box.size();
 }
 
 PixelAspectRatio::PixelAspectRatio() = default;
