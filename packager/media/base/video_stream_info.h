@@ -135,7 +135,6 @@ class VideoStreamInfo : public StreamInfo {
   // Raw colr atom data. It is only applicable to the mp4 container.
   std::vector<uint8_t> colr_data_;
 
-
   // Not using DISALLOW_COPY_AND_ASSIGN here intentionally to allow the compiler
   // generated copy constructor and assignment operator. Since the extra data is
   // typically small, the performance impact is minimal.
